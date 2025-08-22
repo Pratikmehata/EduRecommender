@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 import pickle
-import numpy as np
 import os
 import json
 
@@ -41,12 +40,26 @@ except FileNotFoundError:
     except ImportError:
         # Final fallback - create a basic mock model
         class MockModel:
+            def __init__(self):
+                self.categories = ['Math_Intermediate', 'Science_Intermediate', 'General_Studies']
+            
             def predict(self, features):
                 return 'Math_Intermediate'
+            
             def predict_proba(self, features):
-                return np.array([0.4, 0.2, 0.1, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05])
+                return [0.6, 0.3, 0.1]
+            
+            def get_top_categories(self, probabilities, top_n=3):
+                return self.categories[:top_n], probabilities[:top_n]
+            
             def get_recommendations(self, categories, probabilities, max_recommendations=9):
-                return [{'title': 'Sample Recommendation', 'type': 'course', 'difficulty': 'intermediate'}]
+                return [{
+                    'title': 'Sample Math Course', 
+                    'type': 'course', 
+                    'difficulty': 'intermediate',
+                    'category': 'Math_Intermediate',
+                    'confidence': 0.6
+                }]
         
         model = MockModel()
         model_info = {'model_type': 'MockModel', 'features_used': []}
@@ -65,18 +78,13 @@ def recommend():
             prediction = model.predict(features)
             probabilities = model.predict_proba(features)
             
-            # Get top 3 categories with highest probabilities
-            if hasattr(model, 'categories'):
-                categories = model.categories
+            # Get top categories
+            if hasattr(model, 'get_top_categories'):
+                top_categories, top_probabilities = model.get_top_categories(probabilities, top_n=3)
             else:
-                categories = ['Math_Basic', 'Math_Intermediate', 'Math_Advanced',
-                             'Science_Basic', 'Science_Intermediate', 'Science_Advanced',
-                             'Language_Intermediate', 'Language_Advanced', 'General_Studies']
-            
-            # Get top 3 categories
-            top_indices = np.argsort(probabilities)[-3:][::-1]
-            top_categories = [categories[i] for i in top_indices]
-            top_probabilities = probabilities[top_indices]
+                # Fallback for mock model
+                top_categories = model.categories[:3]
+                top_probabilities = probabilities[:3]
             
             # Get recommendations
             if hasattr(model, 'get_recommendations'):
@@ -127,7 +135,41 @@ def generate_recommendations(categories, probabilities):
             {'title': 'Geometry Concepts', 'type': 'book', 'difficulty': 'intermediate', 'pages': 200},
             {'title': 'Problem Solving Strategies', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '45 mins'}
         ],
-        # ... (other categories same as before)
+        'Math_Advanced': [
+            {'title': 'Advanced Calculus', 'type': 'course', 'difficulty': 'advanced', 'duration': '8 weeks'},
+            {'title': 'Linear Algebra Concepts', 'type': 'book', 'difficulty': 'advanced', 'pages': 350},
+            {'title': 'Math Olympiad Preparation', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '60 mins'}
+        ],
+        'Science_Basic': [
+            {'title': 'Introduction to Biology', 'type': 'course', 'difficulty': 'beginner', 'duration': '4 weeks'},
+            {'title': 'Basic Chemistry Principles', 'type': 'book', 'difficulty': 'beginner', 'pages': 150},
+            {'title': 'Simple Science Experiments', 'type': 'activity', 'difficulty': 'beginner', 'time_required': '30 mins'}
+        ],
+        'Science_Intermediate': [
+            {'title': 'Chemistry in Daily Life', 'type': 'course', 'difficulty': 'intermediate', 'duration': '6 weeks'},
+            {'title': 'Physics Fundamentals', 'type': 'book', 'difficulty': 'intermediate', 'pages': 250},
+            {'title': 'Intermediate Lab Techniques', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '45 mins'}
+        ],
+        'Science_Advanced': [
+            {'title': 'Advanced Physics', 'type': 'course', 'difficulty': 'advanced', 'duration': '8 weeks'},
+            {'title': 'Organic Chemistry', 'type': 'book', 'difficulty': 'advanced', 'pages': 400},
+            {'title': 'Research Project Guidance', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '60 mins'}
+        ],
+        'Language_Intermediate': [
+            {'title': 'Reading Comprehension', 'type': 'course', 'difficulty': 'intermediate', 'duration': '5 weeks'},
+            {'title': 'Vocabulary Builder', 'type': 'book', 'difficulty': 'intermediate', 'pages': 180},
+            {'title': 'Writing Practice', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '40 mins'}
+        ],
+        'Language_Advanced': [
+            {'title': 'Advanced Literature', 'type': 'course', 'difficulty': 'advanced', 'duration': '7 weeks'},
+            {'title': 'Critical Analysis Guide', 'type': 'book', 'difficulty': 'advanced', 'pages': 300},
+            {'title': 'Debate and Discussion', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '50 mins'}
+        ],
+        'General_Studies': [
+            {'title': 'Study Skills Mastery', 'type': 'course', 'difficulty': 'beginner', 'duration': '3 weeks'},
+            {'title': 'Learning Strategies Guide', 'type': 'book', 'difficulty': 'beginner', 'pages': 100},
+            {'title': 'Time Management Workshop', 'type': 'activity', 'difficulty': 'beginner', 'time_required': '30 mins'}
+        ]
     }
     
     all_recommendations = []
