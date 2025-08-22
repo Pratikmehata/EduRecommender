@@ -1,0 +1,23 @@
+{
+  "model_type": "SimpleEducationalModel",
+  "categories": [
+    "Math_Basic",
+    "Math_Intermediate",
+    "Math_Advanced",
+    "Science_Basic",
+    "Science_Intermediate",
+    "Science_Advanced",
+    "Language_Intermediate",
+    "Language_Advanced",
+    "General_Studies"
+  ],
+  "features_used": [
+    "math_score",
+    "science_score",
+    "reading_score",
+    "learning_style",
+    "interest_level",
+    "previous_performance"
+  ],
+  "trained_at": "2025-08-22T17:29:42.122695"
+}
