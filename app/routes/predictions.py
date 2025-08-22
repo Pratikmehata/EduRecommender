@@ -3,6 +3,9 @@ import pickle
 import os
 import json
 
+# Import the model class first
+from models.simple_model import SimpleEducationalModel
+
 predictions_bp = Blueprint('predictions', __name__)
 
 # Load the simple model
@@ -10,7 +13,7 @@ model = None
 model_info = {}
 
 try:
-    # Try loading the simple model
+    # Try loading the simple model - now the class is available
     with open('models/simple_model.pkl', 'rb') as f:
         model = pickle.load(f)
     print("Simple model loaded successfully")
@@ -28,42 +31,22 @@ try:
         
 except FileNotFoundError:
     # Create a simple model if none exists
-    try:
-        from models.simple_model import SimpleEducationalModel
-        model = SimpleEducationalModel()
-        model_info = {
-            'model_type': 'SimpleEducationalModel',
-            'features_used': ['math_score', 'science_score', 'reading_score', 
-                             'learning_style', 'interest_level', 'previous_performance']
-        }
-        print("Using in-memory simple model")
-    except ImportError:
-        # Final fallback - create a basic mock model
-        class MockModel:
-            def __init__(self):
-                self.categories = ['Math_Intermediate', 'Science_Intermediate', 'General_Studies']
-            
-            def predict(self, features):
-                return 'Math_Intermediate'
-            
-            def predict_proba(self, features):
-                return [0.6, 0.3, 0.1]
-            
-            def get_top_categories(self, probabilities, top_n=3):
-                return self.categories[:top_n], probabilities[:top_n]
-            
-            def get_recommendations(self, categories, probabilities, max_recommendations=9):
-                return [{
-                    'title': 'Sample Math Course', 
-                    'type': 'course', 
-                    'difficulty': 'intermediate',
-                    'category': 'Math_Intermediate',
-                    'confidence': 0.6
-                }]
-        
-        model = MockModel()
-        model_info = {'model_type': 'MockModel', 'features_used': []}
-        print("Using mock model")
+    model = SimpleEducationalModel()
+    model_info = {
+        'model_type': 'SimpleEducationalModel',
+        'features_used': ['math_score', 'science_score', 'reading_score', 
+                         'learning_style', 'interest_level', 'previous_performance']
+    }
+    print("Using in-memory simple model")
+except Exception as e:
+    # If pickle loading fails, create a new model
+    print(f"Error loading model: {e}. Creating new model.")
+    model = SimpleEducationalModel()
+    model_info = {
+        'model_type': 'SimpleEducationalModel',
+        'features_used': ['math_score', 'science_score', 'reading_score', 
+                         'learning_style', 'interest_level', 'previous_performance']
+    }
 
 @predictions_bp.route('/recommend', methods=['POST'])
 def recommend():
@@ -82,9 +65,18 @@ def recommend():
             if hasattr(model, 'get_top_categories'):
                 top_categories, top_probabilities = model.get_top_categories(probabilities, top_n=3)
             else:
-                # Fallback for mock model
-                top_categories = model.categories[:3]
-                top_probabilities = probabilities[:3]
+                # Fallback for basic models
+                if hasattr(model, 'categories'):
+                    categories = model.categories
+                else:
+                    categories = ['Math_Basic', 'Math_Intermediate', 'Math_Advanced',
+                                 'Science_Basic', 'Science_Intermediate', 'Science_Advanced',
+                                 'Language_Intermediate', 'Language_Advanced', 'General_Studies']
+                
+                # Simple top 3 selection
+                top_indices = sorted(range(len(probabilities)), key=lambda i: probabilities[i], reverse=True)[:3]
+                top_categories = [categories[i] for i in top_indices]
+                top_probabilities = [probabilities[i] for i in top_indices]
             
             # Get recommendations
             if hasattr(model, 'get_recommendations'):
