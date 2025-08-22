@@ -1,4 +1,3 @@
-import pickle
 import os
 import json
 from datetime import datetime
@@ -11,12 +10,129 @@ class SimpleEducationalModel:
             'Language_Intermediate', 'Language_Advanced', 'General_Studies'
         ]
         
-        # Predefined recommendation database (same as before)
+        # Predefined recommendation database
         self.recommendation_db = {
-            # ... (same as before)
+            'Math_Basic': [
+                {'title': 'Basic Arithmetic Fundamentals', 'type': 'course', 'difficulty': 'beginner', 'duration': '4 weeks'},
+                {'title': 'Number Sense Workbook', 'type': 'book', 'difficulty': 'beginner', 'pages': 120},
+                {'title': 'Math Games for Beginners', 'type': 'activity', 'difficulty': 'beginner', 'time_required': '30 mins'}
+            ],
+            'Math_Intermediate': [
+                {'title': 'Algebra Foundations', 'type': 'course', 'difficulty': 'intermediate', 'duration': '6 weeks'},
+                {'title': 'Geometry Concepts', 'type': 'book', 'difficulty': 'intermediate', 'pages': 200},
+                {'title': 'Problem Solving Strategies', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '45 mins'}
+            ],
+            'Math_Advanced': [
+                {'title': 'Advanced Calculus', 'type': 'course', 'difficulty': 'advanced', 'duration': '8 weeks'},
+                {'title': 'Linear Algebra Concepts', 'type': 'book', 'difficulty': 'advanced', 'pages': 350},
+                {'title': 'Math Olympiad Preparation', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '60 mins'}
+            ],
+            'Science_Basic': [
+                {'title': 'Introduction to Biology', 'type': 'course', 'difficulty': 'beginner', 'duration': '4 weeks'},
+                {'title': 'Basic Chemistry Principles', 'type': 'book', 'difficulty': 'beginner', 'pages': 150},
+                {'title': 'Simple Science Experiments', 'type': 'activity', 'difficulty': 'beginner', 'time_required': '30 mins'}
+            ],
+            'Science_Intermediate': [
+                {'title': 'Chemistry in Daily Life', 'type': 'course', 'difficulty': 'intermediate', 'duration': '6 weeks'},
+                {'title': 'Physics Fundamentals', 'type': 'book', 'difficulty': 'intermediate', 'pages': 250},
+                {'title': 'Intermediate Lab Techniques', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '45 mins'}
+            ],
+            'Science_Advanced': [
+                {'title': 'Advanced Physics', 'type': 'course', 'difficulty': 'advanced', 'duration': '8 weeks'},
+                {'title': 'Organic Chemistry', 'type': 'book', 'difficulty': 'advanced', 'pages': 400},
+                {'title': 'Research Project Guidance', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '60 mins'}
+            ],
+            'Language_Intermediate': [
+                {'title': 'Reading Comprehension', 'type': 'course', 'difficulty': 'intermediate', 'duration': '5 weeks'},
+                {'title': 'Vocabulary Builder', 'type': 'book', 'difficulty': 'intermediate', 'pages': 180},
+                {'title': 'Writing Practice', 'type': 'activity', 'difficulty': 'intermediate', 'time_required': '40 mins'}
+            ],
+            'Language_Advanced': [
+                {'title': 'Advanced Literature', 'type': 'course', 'difficulty': 'advanced', 'duration': '7 weeks'},
+                {'title': 'Critical Analysis Guide', 'type': 'book', 'difficulty': 'advanced', 'pages': 300},
+                {'title': 'Debate and Discussion', 'type': 'activity', 'difficulty': 'advanced', 'time_required': '50 mins'}
+            ],
+            'General_Studies': [
+                {'title': 'Study Skills Mastery', 'type': 'course', 'difficulty': 'beginner', 'duration': '3 weeks'},
+                {'title': 'Learning Strategies Guide', 'type': 'book', 'difficulty': 'beginner', 'pages': 100},
+                {'title': 'Time Management Workshop', 'type': 'activity', 'difficulty': 'beginner', 'time_required': '30 mins'}
+            ]
         }
     
-    # ... (other methods: predict, predict_proba, get_recommendations)
+    def predict(self, features):
+        """Rule-based prediction using student scores and preferences"""
+        math_score, science_score, reading_score, learning_style, interest_level, previous_performance = features
+        
+        # Calculate weighted scores based on learning style
+        if learning_style == 0:  # Visual learner
+            math_weight, science_weight, reading_weight = 1.1, 1.0, 0.9
+        elif learning_style == 1:  # Auditory learner  
+            math_weight, science_weight, reading_weight = 0.9, 1.0, 1.1
+        else:  # Kinesthetic learner
+            math_weight, science_weight, reading_weight = 1.0, 1.1, 0.9
+        
+        # Apply interest level multiplier
+        interest_multiplier = 1.0 + (interest_level * 0.1)
+        
+        # Calculate adjusted scores
+        adj_math = math_score * math_weight * interest_multiplier
+        adj_science = science_score * science_weight * interest_multiplier
+        adj_reading = reading_score * reading_weight * interest_multiplier
+        
+        # Determine primary category based on highest adjusted score
+        max_score = max(adj_math, adj_science, adj_reading)
+        
+        if max_score == adj_math:
+            if math_score >= 85: return 'Math_Advanced'
+            elif math_score >= 70: return 'Math_Intermediate'
+            else: return 'Math_Basic'
+        elif max_score == adj_science:
+            if science_score >= 85: return 'Science_Advanced'
+            elif science_score >= 70: return 'Science_Intermediate'
+            else: return 'Science_Basic'
+        else:
+            if reading_score >= 85: return 'Language_Advanced'
+            elif reading_score >= 70: return 'Language_Intermediate'
+            else: return 'General_Studies'
+    
+    def predict_proba(self, features):
+        """Calculate probability distribution across all categories"""
+        primary_category = self.predict(features)
+        math_score, science_score, reading_score, learning_style, interest_level, previous_performance = features
+        
+        # Base probabilities
+        probs = {category: 0.05 for category in self.categories}  # Minimum 5% for all
+        
+        # Boost primary category
+        probs[primary_category] = 0.4
+        
+        # Boost related categories based on scores
+        if math_score >= 70:
+            probs['Math_Intermediate'] += 0.1
+            if math_score >= 85:
+                probs['Math_Advanced'] += 0.15
+            else:
+                probs['Math_Basic'] += 0.1
+        
+        if science_score >= 70:
+            probs['Science_Intermediate'] += 0.1
+            if science_score >= 85:
+                probs['Science_Advanced'] += 0.15
+            else:
+                probs['Science_Basic'] += 0.1
+        
+        if reading_score >= 70:
+            probs['Language_Intermediate'] += 0.1
+            if reading_score >= 85:
+                probs['Language_Advanced'] += 0.15
+            else:
+                probs['General_Studies'] += 0.1
+        
+        # Normalize probabilities
+        total = sum(probs.values())
+        normalized_probs = [probs[category] / total for category in self.categories]
+        
+        return normalized_probs
     
     def get_top_categories(self, probabilities, top_n=3):
         """Get top N categories based on probabilities"""
@@ -31,31 +147,21 @@ class SimpleEducationalModel:
         top_probabilities = [prob for prob, _ in prob_cat[:top_n]]
         
         return top_categories, top_probabilities
-
-def train_simple_model():
-    """Train and save the simple model"""
-    model = SimpleEducationalModel()
     
-    os.makedirs('models', exist_ok=True)
-    
-    with open('models/simple_model.pkl', 'wb') as f:
-        pickle.dump(model, f)
-    
-    # Also save model info as JSON for frontend
-    model_info = {
-        'model_type': 'SimpleEducationalModel',
-        'categories': model.categories,
-        'features_used': ['math_score', 'science_score', 'reading_score', 
-                         'learning_style', 'interest_level', 'previous_performance'],
-        'trained_at': datetime.now().isoformat()
-    }
-    
-    with open('models/model_info.json', 'w') as f:
-        json.dump(model_info, f, indent=2)
-    
-    print("Simple model saved to 'models/simple_model.pkl'")
-    print("Model info saved to 'models/model_info.json'")
-    return model
-
-if __name__ == "__main__":
-    train_simple_model()
+    def get_recommendations(self, categories, probabilities, max_recommendations=9):
+        """Get recommendations for the top categories"""
+        all_recommendations = []
+        
+        for i, category in enumerate(categories):
+            if category in self.recommendation_db:
+                recs = self.recommendation_db[category]
+                for rec in recs:
+                    rec_with_meta = rec.copy()
+                    rec_with_meta['category'] = category
+                    rec_with_meta['confidence'] = float(probabilities[i])
+                    all_recommendations.append(rec_with_meta)
+        
+        # Sort by confidence score (highest first)
+        all_recommendations.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        return all_recommendations[:max_recommendations]
