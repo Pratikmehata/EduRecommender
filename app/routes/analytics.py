@@ -4,7 +4,7 @@ from datetime import datetime
 
 analytics_bp = Blueprint('analytics', __name__)
 
-# In production, use a proper database
+# Simple in-memory analytics storage
 analytics_data = []
 
 @analytics_bp.route('/track', methods=['POST'])
@@ -44,7 +44,12 @@ def get_analytics_summary():
 
 def get_popular_categories():
     """Get most recommended categories"""
-    categories = [record['recommendation_data'].get('category') for record in analytics_data]
+    categories = []
+    for record in analytics_data:
+        if 'recommendation_data' in record and 'predicted_categories' in record['recommendation_data']:
+            categories.extend(record['recommendation_data']['predicted_categories'])
+    
+    # Count occurrences
     from collections import Counter
     return dict(Counter(categories).most_common(5))
 
@@ -53,14 +58,18 @@ def get_time_based_analysis():
     time_analysis = {'morning': 0, 'afternoon': 0, 'evening': 0, 'night': 0}
     
     for record in analytics_data:
-        hour = datetime.fromisoformat(record['timestamp']).hour
-        if 6 <= hour < 12:
-            time_analysis['morning'] += 1
-        elif 12 <= hour < 17:
-            time_analysis['afternoon'] += 1
-        elif 17 <= hour < 22:
-            time_analysis['evening'] += 1
-        else:
-            time_analysis['night'] += 1
+        if 'timestamp' in record:
+            try:
+                hour = datetime.fromisoformat(record['timestamp'].replace('Z', '+00:00')).hour
+                if 6 <= hour < 12:
+                    time_analysis['morning'] += 1
+                elif 12 <= hour < 17:
+                    time_analysis['afternoon'] += 1
+                elif 17 <= hour < 22:
+                    time_analysis['evening'] += 1
+                else:
+                    time_analysis['night'] += 1
+            except:
+                pass
     
     return time_analysis
