@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+
+from flask import Blueprint, request, jsonify, render_template
 import os
 import json
 
@@ -7,6 +8,7 @@ from models.simple_model import SimpleEducationalModel
 
 predictions_bp = Blueprint('predictions', __name__)
 
+# ... (rest of your existing routes)
 # Always create a new model instance (no persistence needed)
 model = SimpleEducationalModel()
 model_info = {
@@ -18,6 +20,11 @@ model_info = {
 
 print("Simple educational model initialized")
 
+@predictions_bp.route('/', methods=['GET'])
+def index():
+    """Serve the main HTML page"""
+    return render_template('index.html')
+    
 @predictions_bp.route('/recommend', methods=['POST'])
 def recommend():
     try:
